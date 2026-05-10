@@ -12,55 +12,53 @@ transmitted file.
 2. Run this program.  It continuously captures the screen, detects the cimbar
    code by looking for its distinctive corner anchors and coloured data tiles,
    and feeds the captured frames to `cimbar_recv` for fountain-code decoding.
-3. When the file is fully received it is saved to the output directory and a
-   desktop notification is shown.
+3. When the file is fully received it is saved to the output directory (default:
+   `%USERPROFILE%\Downloads`) and a Windows 10 balloon notification is shown.
 4. If no cimbar code appears within the configured timeout (default 20 s) the
    program exits with an error.
 
 ## Prerequisites
 
-### 1. libcimbar (`cimbar_recv`)
+### 1. libcimbar (`cimbar_recv.exe`) — Windows 10
 
-Build from source:
+Requirements: **Visual Studio 2019 or later**, **CMake ≥ 3.14**, **Git**.
 
-```bash
+```bat
 git clone --recurse-submodules https://github.com/sz3/libcimbar
 cd libcimbar
-mkdir build && cd build
-cmake ..
-make -j$(nproc) cimbar_recv
-sudo cp src/exe/cimbar_recv /usr/local/bin/
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --target cimbar_recv
+:: Copy to somewhere on PATH, e.g.:
+copy build\Release\cimbar_recv.exe C:\Windows\System32\
 ```
 
-### 2. System dependencies (Linux)
+> Alternatively, check the [libcimbar Releases](https://github.com/sz3/libcimbar/releases)
+> page for pre-built Windows binaries.
 
-```bash
-# X11 screen-capture libraries (usually already present on a desktop system)
-sudo apt install libx11-dev libxrandr-dev
+### 2. Go toolchain (to build this tool)
 
-# Desktop notifications
-sudo apt install libnotify-bin
-```
+Download from https://go.dev/dl/ and install (adds `go` to PATH automatically).
 
 ## Build
 
-```bash
+```bat
 git clone https://github.com/litertiger/pc_filesend_bycimbar
 cd pc_filesend_bycimbar
-go build -o cimbar-recv-pc .
+go build -o cimbar-recv-pc.exe .
 ```
 
 ## Usage
 
 ```
-cimbar-recv-pc [flags]
+cimbar-recv-pc.exe [flags]
 
 Flags:
-  -output  string    Output directory for received files (default ".")
+  -output  string    Output directory for received files
+                     (default: %USERPROFILE%\Downloads)
   -timeout duration  Timeout if no cimbar code detected (default 20s)
   -fps     int       Screen capture frames per second (default 5)
   -display int       Display index to monitor (default 0)
-  -cimbar  string    Path to cimbar_recv binary (default "cimbar_recv")
+  -cimbar  string    Path to cimbar_recv executable (default "cimbar_recv")
   -region  string    Capture region WxH+X+Y, or "auto" for full display (default "auto")
   -verbose           Show cimbar_recv output
   -keep              Keep captured frame images after decoding
@@ -68,34 +66,51 @@ Flags:
 
 ### Examples
 
-```bash
-# Basic usage — full screen, output to current directory
-./cimbar-recv-pc
+```bat
+:: Basic usage — full screen, output to Downloads
+cimbar-recv-pc.exe
 
-# Save to Downloads, wait up to 30 s for code to appear
-./cimbar-recv-pc -output ~/Downloads -timeout 30s
+:: Save to Desktop, wait up to 30 s for the code to appear
+cimbar-recv-pc.exe -output %USERPROFILE%\Desktop -timeout 30s
 
-# Monitor only the right half of a 1920×1080 display (faster detection)
-./cimbar-recv-pc -region 960x1080+960+0
+:: Monitor only the right half of a 1920x1080 display (faster)
+cimbar-recv-pc.exe -region 960x1080+960+0
 
-# Use a custom cimbar_recv path and show its output
-./cimbar-recv-pc -cimbar /opt/libcimbar/build/cimbar_recv -verbose
+:: Custom cimbar_recv path, verbose output
+cimbar-recv-pc.exe -cimbar C:\tools\cimbar_recv.exe -verbose
 ```
+
+### Running from Command Prompt or PowerShell
+
+```bat
+:: cmd.exe
+cimbar-recv-pc.exe -output %USERPROFILE%\Downloads
+
+:: PowerShell
+.\cimbar-recv-pc.exe -output $env:USERPROFILE\Downloads
+```
+
+## Notifications
+
+On Windows 10 a system-tray balloon notification is shown on success or error.
+The notification is sent via PowerShell (`System.Windows.Forms.NotifyIcon`) and
+does not require any additional packages.
 
 ## Detection logic
 
 The anchor detector looks for three nested dark→light→dark square regions in
 the top-left, top-right, and bottom-left corners of a candidate code area, plus
-a brightly-coloured (high-HSV-saturation) interior — matching the cimbar
+a brightly-coloured (high HSV-saturation) interior — matching the cimbar
 standard layout.  It requires no native cimbar library at detection time.
 
 ## Decoding architecture
 
-Frames are saved as `frame_NNNNN.png` and passed to `cimbar_recv` as an OpenCV
-image sequence (`frame_%05d.png`).  `cimbar_recv` uses fountain (raptor-like)
-decoding, so it reconstructs the file once a sufficient number of *unique*
-frames have been captured.  Decoding is attempted every 5 seconds of captured
-footage and retried until the transfer completes or a hard timeout is reached.
+Frames are saved as `frame_NNNNN.png` in a temporary folder and passed to
+`cimbar_recv` as an OpenCV image sequence (`frame_%05d.png`).  `cimbar_recv`
+uses fountain (raptor-like) decoding and reconstructs the file once enough
+unique frames have been captured.  Decoding is attempted every 5 seconds of
+captured footage and retried until the transfer completes or a hard timeout is
+reached.
 
 ## Licence
 

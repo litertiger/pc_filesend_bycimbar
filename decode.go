@@ -141,13 +141,15 @@ func newestFile(dir string, since time.Time) string {
 func checkCimbarBin(bin string) error {
 	if _, err := exec.LookPath(bin); err != nil {
 		return fmt.Errorf(
-			"cannot find %q in PATH\n\n"+
-				"Build and install libcimbar from: https://github.com/sz3/libcimbar\n"+
+			"cannot find %q\n\n"+
+				"Build libcimbar on Windows (requires Visual Studio 2019+ and CMake):\n"+
 				"  git clone --recurse-submodules https://github.com/sz3/libcimbar\n"+
-				"  cd libcimbar && mkdir build && cd build\n"+
-				"  cmake .. && make -j$(nproc) cimbar_recv\n"+
-				"  sudo cp src/exe/cimbar_recv /usr/local/bin/\n\n"+
-				"Or specify --cimbar=/path/to/cimbar_recv", bin)
+				"  cd libcimbar\n"+
+				"  cmake -B build -DCMAKE_BUILD_TYPE=Release\n"+
+				"  cmake --build build --config Release --target cimbar_recv\n"+
+				"  copy build\\Release\\cimbar_recv.exe C:\\Windows\\System32\\\n\n"+
+				"Then add the directory containing cimbar_recv.exe to PATH,\n"+
+				"or use: -cimbar C:\\path\\to\\cimbar_recv.exe", bin)
 	}
 	return nil
 }

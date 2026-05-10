@@ -6,7 +6,6 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/kbinani/screenshot"
@@ -46,23 +45,12 @@ func parseRegion(spec string, display DisplayInfo) (image.Rectangle, error) {
 	return image.Rect(x, y, x+w, y+h), nil
 }
 
-// captureRegion captures a specific rectangle from the display.
+// captureRegion captures a rectangle from the display using the platform GDI/API.
+// On Windows this uses BitBlt via github.com/kbinani/screenshot.
 func captureRegion(region image.Rectangle) (image.Image, error) {
-	if runtime.GOOS == "linux" {
-		return captureX11(region)
-	}
 	img, err := screenshot.CaptureRect(region)
 	if err != nil {
 		return nil, fmt.Errorf("screen capture failed: %w", err)
-	}
-	return img, nil
-}
-
-// captureX11 uses the screenshot library which internally uses X11/XShm.
-func captureX11(region image.Rectangle) (image.Image, error) {
-	img, err := screenshot.CaptureRect(region)
-	if err != nil {
-		return nil, fmt.Errorf("X11 capture failed: %w", err)
 	}
 	return img, nil
 }

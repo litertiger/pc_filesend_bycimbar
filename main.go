@@ -26,6 +26,7 @@ import (
 	"image"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -88,16 +89,37 @@ type Config struct {
 
 func parseFlags() Config {
 	var cfg Config
-	flag.StringVar(&cfg.OutputDir, "output", ".", "output directory for received files")
+	flag.StringVar(&cfg.OutputDir, "output", defaultOutputDir(), "output directory for received files")
 	flag.DurationVar(&cfg.DetectTimeout, "timeout", 20*time.Second, "timeout if no cimbar code detected on screen")
 	flag.IntVar(&cfg.FPS, "fps", 5, "screen capture frames per second")
 	flag.IntVar(&cfg.Display, "display", 0, "display index to monitor")
-	flag.StringVar(&cfg.CimbarBin, "cimbar", "cimbar_recv", "path to cimbar_recv binary")
+	flag.StringVar(&cfg.CimbarBin, "cimbar", defaultCimbarBin(), "path to cimbar_recv binary")
 	flag.StringVar(&cfg.Region, "region", "auto", "capture region WxH+X+Y or 'auto' for full display")
 	flag.BoolVar(&cfg.Verbose, "verbose", false, "show cimbar_recv output")
 	flag.BoolVar(&cfg.KeepFrames, "keep", false, "keep captured frame images after decoding")
 	flag.Parse()
 	return cfg
+}
+
+// defaultOutputDir returns the user's Downloads folder on Windows,
+// falling back to the current directory on other platforms.
+func defaultOutputDir() string {
+	if runtime.GOOS == "windows" {
+		if home, err := os.UserHomeDir(); err == nil {
+			dl := filepath.Join(home, "Downloads")
+			if _, err := os.Stat(dl); err == nil {
+				return dl
+			}
+		}
+	}
+	return "."
+}
+
+// defaultCimbarBin returns the expected cimbar_recv executable name.
+// On Windows, exec.LookPath already appends .exe automatically, so we
+// keep the base name for consistency across platforms.
+func defaultCimbarBin() string {
+	return "cimbar_recv"
 }
 
 // ─── Receiver ────────────────────────────────────────────────────────────────
@@ -160,7 +182,7 @@ func (r *Receiver) Run() error {
 				if !detectedCimbar {
 					detectedCimbar = true
 					firstDetectTime = time.Now()
-					fmt.Println("✓ Cimbar code detected! Capturing frames...")
+					fmt.Println("[OK] Cimbar code detected! Capturing frames...")
 				}
 				lastDetectTime = time.Now()
 
