@@ -1,3 +1,15 @@
+# local build artifacts (root)
 pc_filesend_bycimbar
 cimbar-recv-pc
-*.exe
+cimbar-recv-pc.exe
+
+# compiled release binaries — keep release/ directory, ignore the files
+release/*.exe
+release/*.zip
+
+# Go test binaries
+*.test
+
+# OS junk
+Thumbs.db
+.DS_Store
